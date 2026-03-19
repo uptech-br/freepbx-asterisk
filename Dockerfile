@@ -1,0 +1,138 @@
+FROM php:8.2-apache
+
+ARG ASTVERSION=22
+ARG IONCUBE_ARCH="x86-64"
+ARG TZ=America/Recife
+
+LABEL br.com.uptech.app="FreePBX/Asterisk"
+LABEL maintainer="UPTECH <contato@uptech.com.br>"
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV AST_PREFIX=/usr/local/asterisk
+
+RUN --mount=type=cache,target=/var/cache/apt \
+    apt update && \
+    apt upgrade -y && \
+    apt install -y --no-install-recommends --no-install-suggests \
+    tzdata \
+    iputils-ping \
+    nftables \
+    iproute2 \
+    fail2ban \
+    git \
+    ffmpeg \
+    curl \
+    dbus \
+    nodejs \
+    npm \
+    unixodbc \
+    sox \
+    cron \
+    ca-certificates \
+    vim \
+    wget \
+    build-essential \
+    doxygen \
+    zip \
+    unzip \
+    libcurl4-openssl-dev \
+    mariadb-client \
+    bison \
+    flex \
+    subversion \
+    libssl-dev \
+    libxml2-dev \
+    libnewt-dev \
+    libncurses5-dev \
+    libsqlite3-dev \
+    libjansson-dev \
+    libxml2-dev \
+    libicu-dev \
+    libzip-dev \
+    uuid-dev \
+    default-libmysqlclient-dev \
+    htop \
+    sngrep \
+    lame \
+    mpg123 \
+    odbc-mariadb \
+    openssh-client \
+    ssmtp
+
+RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" && \
+    sed -ri 's/^upload_max_filesize.*/upload_max_filesize = 64M/; s/^memory_limit.*/memory_limit = 512M/' "$PHP_INI_DIR/php.ini" && \
+    docker-php-ext-install -j$(nproc) \
+    mysqli \
+    pdo \
+    pdo_mysql \
+    xml \
+    intl  \
+    gettext \
+    gd \
+    curl \
+    sysvsem \
+    zip
+
+RUN cd /tmp && \
+    wget -q http://downloads.asterisk.org/pub/telephony/asterisk/asterisk-"${ASTVERSION}"-current.tar.gz -O asterisk.tar.gz && \
+    tar xvf asterisk.tar.gz && \
+    rm asterisk.tar.gz && \
+    cd /tmp/asterisk-"${ASTVERSION}".*/ && \
+    contrib/scripts/install_prereq install && \
+    ./configure --prefix="$AST_PREFIX" --libdir="$AST_PREFIX/usr/lib64" --with-pjproject-bundled --with-jansson-bundled && \
+    make menuselect.makeopts && \
+    ./contrib/scripts/get_mp3_source.sh && \
+    menuselect/menuselect \
+    --enable format_mp3 \
+    --enable chan_mobile \
+    --enable codec_ulaw \
+    --enable codec_alaw \
+    --enable MOH-OPSOUND-G729 \
+    menuselect.makeopts && \
+    make -j$(nproc) && \
+    make install && \
+    make samples && \
+    make config && \
+    cd / && rm -r /tmp/*
+
+RUN wget -q https://downloads.ioncube.com/loader_downloads/ioncube_loaders_lin_"${IONCUBE_ARCH}".zip -O /tmp/ioncube.zip && \ 
+    unzip /tmp/ioncube.zip -d /tmp && \
+    PHP_EXTENSION_DIR=$(php -r 'echo ini_get("extension_dir");') && \ 
+    cp /tmp/ioncube/ioncube_loader_lin_8.2.so "${PHP_EXTENSION_DIR}/" && \ 
+    echo "zend_extension=${PHP_EXTENSION_DIR}/ioncube_loader_lin_8.2.so" > /usr/local/etc/php/conf.d/00-ioncube.ini && \ 
+    rm -r /tmp/*
+
+RUN groupadd asterisk && \
+    useradd  --home-dir "$AST_PREFIX/var/lib/asterisk" --gid asterisk asterisk && \
+    sed -ri 's|^#?(AST_USER)=.*|\1=asterisk|; s|^#?(AST_GROUP)=.*|\1=asterisk|' /etc/default/asterisk && \
+    sed -ri 's|^;?runuser *=.*|runuser = asterisk|; s|^;?rungroup *=.*|rungroup = asterisk|' "$AST_PREFIX/etc/asterisk/asterisk.conf"
+
+RUN sed -i 's/^\(User\|Group\).*/\1 asterisk/' /etc/apache2/apache2.conf && \
+    sed -i -e '/<Directory \/var\/www\/>/,/<\/Directory>/ s/Options Indexes FollowSymLinks/Options -Indexes +FollowSymLinks/' /etc/apache2/apache2.conf && \
+    a2enmod rewrite headers expires remoteip
+
+RUN cd /usr/src && \
+    wget -q http://mirror.freepbx.org/modules/packages/freepbx/freepbx-17.0-latest-EDGE.tgz && \
+    tar zxf freepbx-17.0-latest-EDGE.tgz && \
+    rm freepbx-17.0-latest-EDGE.tgz
+
+RUN ln -snf "/usr/share/zoneinfo/$TZ" /etc/localtime && echo "$TZ" > /etc/timezone && \
+    mkdir -p /var/run/asterisk && \
+    mkdir -p /var/run/dbus && \
+    chown asterisk:asterisk /var/run/asterisk && \
+    chown messagebus:messagebus /var/run/dbus && \
+    rm -rf /etc/fail2ban/jail.d/* && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /
+
+COPY rootfs /
+
+RUN chmod +x /usr/local/bin/docker-entrypoint
+
+# Healthcheck para Apache/Asterisk.
+HEALTHCHECK --interval=30s --timeout=5s --retries=5 --start-period=10s \
+    CMD asterisk -rx 'core show uptime' >/dev/null 2>&1 || exit 1
+
+ENTRYPOINT ["docker-entrypoint"]
+CMD ["apache2-foreground"]

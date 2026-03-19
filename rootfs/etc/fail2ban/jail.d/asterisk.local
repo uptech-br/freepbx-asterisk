@@ -1,0 +1,21 @@
+[DEFAULT]
+findtime = 10m
+bantime  = 12h
+maxretry = 15
+ignoreip = 127.0.0.1/8 ::1 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 100.64.0.0/10
+
+[asterisk-security-udp]
+enabled  = true
+filter   = asterisk
+logpath  = /usr/local/asterisk/var/log/asterisk/fail2ban
+backend  = auto
+protocol = udp
+banaction = nftables[type=allports]
+
+[asterisk-security-tcp]
+enabled  = true
+filter   = asterisk
+logpath  = /usr/local/asterisk/var/log/asterisk/fail2ban
+backend  = auto
+protocol = tcp
+banaction = nftables[type=allports]

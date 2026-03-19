@@ -1,0 +1,48 @@
+#!/bin/bash
+
+shopt -s nullglob
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+LIB_DIR="${SCRIPT_DIR}/docker-entrypoint.d"
+
+source "${LIB_DIR}/common.sh"
+source "${LIB_DIR}/db.sh"
+source "${LIB_DIR}/network.sh"
+source "${LIB_DIR}/instance.sh"
+source "${LIB_DIR}/odbc.sh"
+source "${LIB_DIR}/ssmtp.sh"
+source "${LIB_DIR}/services.sh"
+source "${LIB_DIR}/freepbx.sh"
+source "${LIB_DIR}/hooks.sh"
+
+instance_directory="/data"
+hooks="/data/entrypoint-hooks.d"
+
+wait_for_db
+add_extra_ips
+
+detect_or_prepare_instance "${instance_directory}"
+should_install_freepbx=$?
+
+restore_symlinks "${instance_directory}"
+
+write_odbc_ini
+write_ssmtp_ini
+
+start_dbus
+start_cron
+
+start_asterisk
+start_fail2ban
+
+if [[ $should_install_freepbx -eq 0 ]]; then
+    freepbx_install "${instance_directory}"
+fi
+
+load_nftables_configs "${hooks}"
+run_bash_scripts "${hooks}"
+
+fix_permissions "${instance_directory}"
+freepbx_post
+
+exec "$@"
