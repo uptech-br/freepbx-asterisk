@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-detect_or_prepare_instance() {
+prepare_instance() {
     local instance_directory="${1:?instance_directory required}"
 
     rm -rf /var/www/html
@@ -13,7 +13,7 @@ detect_or_prepare_instance() {
     else
         log "No installation detected. Starting installation mode..."
 
-        mkdir -p "${instance_directory}"/{asterisk,web,entrypoint-hooks.d/{nftables.d,scripts.d}}
+        mkdir -p "${instance_directory}"/{asterisk,web,fail2ban,entrypoint-hooks.d/{nftables.d,scripts.d}}
         mv /usr/local/asterisk "${instance_directory}/"
     fi
 

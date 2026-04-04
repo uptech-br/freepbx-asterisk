@@ -21,7 +21,7 @@ hooks="/data/entrypoint-hooks.d"
 wait_for_db
 add_extra_ips
 
-detect_or_prepare_instance "${instance_directory}"
+prepare_instance "${instance_directory}"
 should_install_freepbx=$?
 
 restore_symlinks "${instance_directory}"

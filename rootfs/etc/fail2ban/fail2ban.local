@@ -1,0 +1,7 @@
+[DEFAULT]
+
+loglevel = INFO
+logtarget = stdout
+
+pidfile = /run/fail2ban/fail2ban.pid
+dbfile = /data/fail2ban/db.sqlite3

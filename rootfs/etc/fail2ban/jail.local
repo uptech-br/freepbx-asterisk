@@ -1,0 +1,19 @@
+[DEFAULT]
+bantime.increment = true
+
+findtime = 10m
+bantime  = 12h
+maxretry = 10
+
+ignoreself = true
+ignoreip = 127.0.0.1/8 ::1 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 100.64.0.0/10
+
+sender = noc@uptech.com.br
+
+[asterisk]
+enabled  = true
+filter   = asterisk
+logpath  = /usr/local/asterisk/var/log/asterisk/fail2ban
+backend  = auto
+protocol = tcp,udp
+banaction = nftables[type=allports,blocktype=drop]
