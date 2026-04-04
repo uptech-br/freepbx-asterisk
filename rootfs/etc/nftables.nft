@@ -8,10 +8,10 @@ define RTP_PORTS  = 10000-20000
 table inet raw {
     chain prerouting {
         type filter hook prerouting priority -300; policy accept;
-        # Anti-spoofing: loopback nunca deve chegar por interface != lo
+        # Anti-spoofing: loopback nunca deve chegar por interface != lo.
         iifname != "lo" ip  saddr 127.0.0.0/8  counter drop comment "V4 - Anti-Spoofing (loopback)"
         iifname != "lo" ip6 saddr ::1/128      counter drop comment "V6 - Anti-Spoofing (loopback)"
-        # Evita conntrack para RTP (reduz custo e superfície sob flood)
+        # Evita conntrack para RTP (reduz custo e superfície sob flood).
         udp dport $RTP_PORTS notrack
     }
 }
@@ -27,9 +27,6 @@ table inet mangle {
 table inet filter {
     chain input {
         type filter hook input priority 0; policy drop;
-        
-        iifname "lo" accept
-        ct state established,related accept
 
         ip saddr 10.5.0.0/16 tcp dport 80 accept
 
@@ -42,23 +39,26 @@ table inet filter {
         icmpv6 type { echo-request, echo-reply } limit rate 5/second burst 10 packets accept
 
         # ---------- IPv6 ND/SLAAC ----------
-        icmpv6 type nd-router-advert ip6 saddr fe80::/10 ip6 hoplimit 255 \
-            accept comment "Allow IPv6 RA (SLAAC) from link-local routers"
-
+        icmpv6 type nd-router-advert ip6 saddr fe80::/10 ip6 hoplimit 255 accept
         icmpv6 type {
             nd-router-solicit,
             nd-neighbor-solicit,
             nd-neighbor-advert
-        } ip6 hoplimit 255 accept comment "Allow IPv6 ND (RS/NS/NA)"
+        } ip6 hoplimit 255 accept
 
+        # ---------- SIP and RTP ----------
         ct state new meta l4proto { tcp, udp } th dport $SIP_PORTS \
-            meter flood-sipv4 { ip saddr timeout 1m limit rate 100/second burst 200 packets } \
+            meter flood-sipv4 { ip saddr timeout 1m limit rate 50/second burst 25 packets } \
             counter accept
-
         ct state new meta l4proto { tcp, udp } th dport $SIP_PORTS \
-            meter flood-sipv6 { ip6 saddr and ffff:ffff:ffff:ffff:: timeout 1m limit rate 100/second burst 200 packets } \
+            meter flood-sipv6 { ip6 saddr and ffff:ffff:ffff:ffff:: timeout 1m limit rate 100/second burst 50 packets } \
             counter accept
 
         udp dport $RTP_PORTS accept
+
+        # Accept traffic from the local loopback interface.
+        iifname "lo" accept
+        # Accept established and related connections.
+        ct state established,related accept
     }
 }
