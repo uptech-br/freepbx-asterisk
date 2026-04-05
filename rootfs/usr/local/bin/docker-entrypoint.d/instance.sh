@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-prepare_instance() {
+function prepare_instance() {
     local instance_directory="${1:?instance_directory required}"
 
     rm -rf /var/www/html
@@ -13,14 +13,18 @@ prepare_instance() {
     else
         log "No installation detected. Starting installation mode..."
 
-        mkdir -p "${instance_directory}"/{asterisk,web,fail2ban,entrypoint-hooks.d/{nftables.d,scripts.d}}
+        mkdir -p "${instance_directory}"/asterisk
+        mkdir -p "${instance_directory}"/web
+        mkdir -p "${instance_directory}"/fail2ban
+        mkdir -p "${instance_directory}"/entrypoint-hooks.d/{nftables.d,scripts.d}
+
         mv /usr/local/asterisk "${instance_directory}/"
     fi
 
     return 0
 }
 
-restore_symlinks() {
+function restore_symlinks() {
     local instance_directory="${1:?instance_directory required}"
 
     log "Verifying and restoring symlinks..."
@@ -37,7 +41,7 @@ restore_symlinks() {
     fi
 }
 
-fix_permissions() {
+function fix_permissions() {
     local instance_directory="${1:?instance_directory required}"
 
     log "Fixing permissions..."

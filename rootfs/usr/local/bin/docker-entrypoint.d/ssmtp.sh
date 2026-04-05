@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-write_ssmtp_ini() {
+function write_ssmtp_ini() {
   cat <<EOF > /etc/ssmtp/ssmtp.conf
 root=${MAIL_FROM_ADDRESS-pbx@uptech.com.br}
 hostname=${MAIL_DOMAIN-uptech.com.br}

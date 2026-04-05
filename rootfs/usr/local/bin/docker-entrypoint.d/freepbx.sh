@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-freepbx_install() {
+function freepbx_install() {
     local instance_directory="${1:?instance_directory required}"
 
     log "Creating asteriskcdrdb database if it does not exist..."
@@ -35,7 +35,7 @@ freepbx_install() {
     fi
 }
 
-freepbx_post() {
+function freepbx_post() {
     log "Running FreePBX module upgrades..."
     fwconsole ma upgradeall
 
