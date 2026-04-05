@@ -19,5 +19,5 @@ function start_asterisk() {
 
 function start_fail2ban() {
     log "Starting Fail2ban service..."
-    /usr/bin/fail2ban-server -f > /dev/null 2>&1 || true
+    /usr/bin/fail2ban-server -b > /dev/null 2>&1 || true
 }
