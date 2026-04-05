@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-write_odbc_ini() {
+function write_odbc_ini() {
   cat <<EOF > /etc/odbc.ini
 [MySQL-asteriskcdrdb]
 driver=MariaDB Unicode
