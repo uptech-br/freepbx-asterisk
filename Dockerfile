@@ -15,7 +15,6 @@ RUN --mount=type=cache,target=/var/cache/apt \
     apt upgrade -y && \
     apt install -y --no-install-recommends --no-install-suggests \
     tzdata \
-    iputils-ping \
     nftables \
     iproute2 \
     fail2ban \
@@ -28,8 +27,6 @@ RUN --mount=type=cache,target=/var/cache/apt \
     unixodbc \
     sox \
     cron \
-    ca-certificates \
-    vim \
     wget \
     build-essential \
     doxygen \
@@ -51,7 +48,6 @@ RUN --mount=type=cache,target=/var/cache/apt \
     libzip-dev \
     uuid-dev \
     default-libmysqlclient-dev \
-    htop \
     sngrep \
     lame \
     mpg123 \
