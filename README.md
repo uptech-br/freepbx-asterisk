@@ -30,6 +30,7 @@ O projeto depende de um volume montado em `/data`.
 /data
 ├── asterisk/                  # binários, configs, spool, logs e runtime do Asterisk
 ├── web/                       # arquivos servidos pelo Apache
+├── fail2ban/                  # configs, db e logs do Fail2Ban
 └── entrypoint-hooks.d/
     ├── nftables.d/            # arquivos .nft aplicados no boot
     └── scripts.d/             # scripts .sh executados no boot
