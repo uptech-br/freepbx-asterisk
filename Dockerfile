@@ -10,7 +10,8 @@ LABEL maintainer="UPTECH <contato@uptech.com.br>"
 ENV DEBIAN_FRONTEND=noninteractive
 ENV AST_PREFIX=/usr/local/asterisk
 
-RUN --mount=type=cache,target=/var/cache/apt \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt update && \
     apt upgrade -y && \
     apt install -y --no-install-recommends --no-install-suggests \
@@ -117,8 +118,7 @@ RUN ln -snf "/usr/share/zoneinfo/$TZ" /etc/localtime && echo "$TZ" > /etc/timezo
     mkdir -p /var/run/dbus && \
     chown asterisk:asterisk /var/run/asterisk && \
     chown messagebus:messagebus /var/run/dbus && \
-    rm -rf /etc/fail2ban/jail.d/* && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /etc/fail2ban/jail.d/*
 
 WORKDIR /
 
@@ -126,7 +126,6 @@ COPY rootfs /
 
 RUN chmod +x /usr/local/bin/docker-entrypoint
 
-# Healthcheck para Apache/Asterisk.
 HEALTHCHECK --interval=30s --timeout=5s --retries=5 --start-period=10s \
     CMD asterisk -rx 'core show uptime' >/dev/null 2>&1 || exit 1
 
