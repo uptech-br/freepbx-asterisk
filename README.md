@@ -134,6 +134,15 @@ set -euo pipefail
 fwconsole reload
 ```
 
+### Observação para Vivo Voz Negócio (VVN)
+
+Se o ambiente usar **Vivo Voz Negócio (VVN)**, ajuste o `sdp_session` no endpoint do tronco SIP. Um ponto adequado para esse override é o arquivo `pjsip.endpoint_custom_post.conf`, substituindo `SIP_TRUNK_NAME` pelo nome real do tronco:
+
+```ini
+[SIP_TRUNK_NAME](+type=endpoint)
+sdp_session=UPTECH/PBX:A22
+```
+
 ## Observações importantes
 
 - O build usa `freepbx-17.0-latest-EDGE`, então o artefato final pode variar ao longo do tempo;
