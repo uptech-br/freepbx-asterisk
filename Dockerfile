@@ -9,6 +9,8 @@ LABEL maintainer="UPTECH <contato@uptech.com.br>"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV AST_PREFIX=/usr/local/asterisk
+ENV APACHE_RUN_USER=asterisk
+ENV APACHE_RUN_GROUP=asterisk
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
@@ -104,9 +106,7 @@ RUN groupadd asterisk && \
     sed -ri 's|^#?(AST_USER)=.*|\1=asterisk|; s|^#?(AST_GROUP)=.*|\1=asterisk|' /etc/default/asterisk && \
     sed -ri 's|^;?runuser *=.*|runuser = asterisk|; s|^;?rungroup *=.*|rungroup = asterisk|' "$AST_PREFIX/etc/asterisk/asterisk.conf"
 
-RUN sed -i 's/^\(User\|Group\).*/\1 asterisk/' /etc/apache2/apache2.conf && \
-    sed -i -e '/<Directory \/var\/www\/>/,/<\/Directory>/ s/Options Indexes FollowSymLinks/Options -Indexes +FollowSymLinks/' /etc/apache2/apache2.conf && \
-    a2enmod rewrite headers expires remoteip
+RUN a2enmod rewrite headers expires remoteip
 
 RUN cd /usr/src && \
     wget -q http://mirror.freepbx.org/modules/packages/freepbx/freepbx-17.0-latest-EDGE.tgz && \
