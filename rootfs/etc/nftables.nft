@@ -1,6 +1,7 @@
 #!/usr/sbin/nft -f
 
 # ========================================
+define HTTP_PORT = 80
 define SIP_PORTS  = { 5060, 5061 }
 define RTP_PORTS  = 10000-20000
 # ========================================
@@ -19,8 +20,12 @@ table inet raw {
 table inet mangle {
     chain prerouting {
         type filter hook prerouting priority -150; policy accept;
-        ct state new tcp flags & (fin|syn|rst|ack) != syn counter drop comment "Drop NEW TCP not SYN"
-        ct state new tcp option maxseg size 1-500 counter drop comment "Drop SYN with suspect MSS"
+        # Drop invalid connection tracking packets.
+        ct state invalid counter drop
+        # Drop TCP packets that are new but not SYN, to prevent stealth scans and other attacks.
+        ct state new tcp flags & (fin|syn|rst|ack) != syn counter drop
+        # Block SYN packets with a suspicious Maximum Segment Size (MSS) value.
+        ct state new tcp option maxseg size 1-500 counter drop
     }
 }
 
@@ -28,7 +33,10 @@ table inet filter {
     chain input {
         type filter hook input priority 0; policy drop;
 
-        ip saddr 10.5.0.0/16 tcp dport 80 accept
+        # Accept traffic from the local loopback interface.
+        iifname "lo" accept
+        # Accept established and related connections.
+        ct state established,related accept
 
         # ---------- ICMPv4 ----------
         ip protocol icmp icmp type { destination-unreachable, time-exceeded, parameter-problem } accept
@@ -46,6 +54,11 @@ table inet filter {
             nd-neighbor-advert
         } ip6 hoplimit 255 accept
 
+        # ---------- HTTP ----------
+        ct state new ip saddr 10.5.0.0/16 tcp dport $HTTP_PORT accept
+        ct state new tcp dport $HTTP_PORT \
+            meter flood-httpv6 { ip6 saddr and ffff:ffff:ffff:ffff:: timeout 5m limit rate 10/second burst 5 packets } accept
+
         # ---------- SIP and RTP ----------
         ct state new meta l4proto { tcp, udp } th dport $SIP_PORTS \
             meter flood-sipv4 { ip saddr timeout 1m limit rate 50/second burst 25 packets } \
@@ -55,10 +68,5 @@ table inet filter {
             counter accept
 
         udp dport $RTP_PORTS accept
-
-        # Accept traffic from the local loopback interface.
-        iifname "lo" accept
-        # Accept established and related connections.
-        ct state established,related accept
     }
 }
