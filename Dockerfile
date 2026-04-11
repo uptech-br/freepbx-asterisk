@@ -72,12 +72,17 @@ RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" && \
     sysvsem \
     zip
 
-RUN cd /tmp && \
+WORKDIR /tmp
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    --mount=type=cache,target=/tmp,sharing=locked \
+    apt update && \
     wget -q http://downloads.asterisk.org/pub/telephony/asterisk/asterisk-"${ASTVERSION}"-current.tar.gz -O asterisk.tar.gz && \
     tar xvf asterisk.tar.gz && \
     rm asterisk.tar.gz && \
-    cd /tmp/asterisk-"${ASTVERSION}".*/ && \
-    contrib/scripts/install_prereq install && \
+    cd asterisk*/ && \
+    ./contrib/scripts/install_prereq install && \
     ./configure --prefix="$AST_PREFIX" --libdir="$AST_PREFIX/usr/lib64" --with-pjproject-bundled --with-jansson-bundled && \
     make menuselect.makeopts && \
     ./contrib/scripts/get_mp3_source.sh && \
@@ -91,29 +96,27 @@ RUN cd /tmp && \
     make -j$(nproc) && \
     make install && \
     make samples && \
-    make config && \
-    cd / && rm -r /tmp/*
+    make config
 
-RUN wget -q https://downloads.ioncube.com/loader_downloads/ioncube_loaders_lin_"${IONCUBE_ARCH}".zip -O /tmp/ioncube.zip && \ 
-    unzip /tmp/ioncube.zip -d /tmp && \
+RUN --mount=type=cache,target=/tmp,sharing=locked \
+    wget -q https://downloads.ioncube.com/loader_downloads/ioncube_loaders_lin_"${IONCUBE_ARCH}".zip -O ioncube.zip && \ 
+    unzip ioncube.zip && \
     PHP_EXTENSION_DIR=$(php -r 'echo ini_get("extension_dir");') && \ 
-    cp /tmp/ioncube/ioncube_loader_lin_8.2.so "${PHP_EXTENSION_DIR}/" && \ 
-    echo "zend_extension=${PHP_EXTENSION_DIR}/ioncube_loader_lin_8.2.so" > /usr/local/etc/php/conf.d/00-ioncube.ini && \ 
-    rm -r /tmp/*
+    cp ioncube/ioncube_loader_lin_8.2.so "${PHP_EXTENSION_DIR}/" && \ 
+    echo "zend_extension=${PHP_EXTENSION_DIR}/ioncube_loader_lin_8.2.so" > /usr/local/etc/php/conf.d/00-ioncube.ini
+
+RUN --mount=type=cache,target=/tmp,sharing=locked \
+    wget -q http://mirror.freepbx.org/modules/packages/freepbx/freepbx-17.0-latest-EDGE.tgz -O freepbx.tgz && \
+    tar zxf freepbx.tgz && \
+    mv freepbx /usr/src/
 
 RUN groupadd asterisk && \
     useradd  --home-dir "$AST_PREFIX/var/lib/asterisk" --gid asterisk asterisk && \
     sed -ri 's|^#?(AST_USER)=.*|\1=asterisk|; s|^#?(AST_GROUP)=.*|\1=asterisk|' /etc/default/asterisk && \
     sed -ri 's|^;?runuser *=.*|runuser = asterisk|; s|^;?rungroup *=.*|rungroup = asterisk|' "$AST_PREFIX/etc/asterisk/asterisk.conf"
 
-RUN a2enmod rewrite headers expires remoteip
-
-RUN cd /usr/src && \
-    wget -q http://mirror.freepbx.org/modules/packages/freepbx/freepbx-17.0-latest-EDGE.tgz && \
-    tar zxf freepbx-17.0-latest-EDGE.tgz && \
-    rm freepbx-17.0-latest-EDGE.tgz
-
-RUN ln -snf "/usr/share/zoneinfo/$TZ" /etc/localtime && echo "$TZ" > /etc/timezone && \
+RUN a2enmod rewrite headers expires remoteip && \
+    ln -snf "/usr/share/zoneinfo/$TZ" /etc/localtime && echo "$TZ" > /etc/timezone && \
     mkdir -p /var/run/asterisk && \
     mkdir -p /var/run/dbus && \
     chown asterisk:asterisk /var/run/asterisk && \
